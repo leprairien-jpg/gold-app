@@ -1,32 +1,31 @@
 import streamlit as st
 from ultralytics import YOLO
 from PIL import Image
-import numpy as np
+import io
 
-st.set_page_config(page_title="Gold Detector", layout="centered")
+st.title("Détecteur d'Or 🪙")
 
-st.title("🪙 Détecteur d'Or Prototype")
-
-# Chargement du modèle YOLOv8 nano (le plus léger pour mobile)
-# Il sera téléchargé automatiquement au premier lancement
 @st.cache_resource
 def load_model():
-    return YOLO("yolov8n.pt") 
+    # On charge le modèle une seule fois pour ne pas figer l'écran
+    return YOLO("yolov8n.pt")
 
 model = load_model()
 
-# Interface de capture
-img_file = st.camera_input("Prendre une photo d'un objet")
+# Ajout d'une option pour uploader si la caméra bugge
+option = st.radio("Source de l'image :", ("Appareil Photo", "Charger un fichier"))
 
-if img_file:
-    img = Image.open(img_file)
+if option == "Appareil Photo":
+    img_file = st.camera_input("Prendre une photo")
+else:
+    img_file = st.file_uploader("Choisir une image", type=['jpg', 'png', 'jpeg'])
+
+if img_file is not None:
+    # Lecture de l'image
+    image = Image.open(img_file)
+    st.image(image, caption="Image capturée", use_container_width=True)
     
-    # Inférence (L'IA analyse)
-    results = model(img)
-    
-    # Affichage
-    res_plotted = results[0].plot()
-    st.image(res_plotted, caption="Analyse en cours...", use_container_width=True)
-    
-    # Message d'aide
-    st.warning("Note : Ce modèle est générique. Pour détecter spécifiquement l'or pur, vous devrez fournir vos propres photos pour l'entraînement final.")
+    with st.spinner("Analyse en cours..."):
+        results = model(image)
+        res_plotted = results[0].plot()
+        st.image(res_plotted, caption="Résultat de l'IA")
